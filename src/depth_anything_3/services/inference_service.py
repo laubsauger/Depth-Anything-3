@@ -101,6 +101,7 @@ class InferenceService:
                 "num_max_points": num_max_points,
                 "show_cameras": show_cameras,
                 "feat_vis_fps": feat_vis_fps,
+                "infer_gs": "gs" in export_format,
             }
 
             # Add pose data (if exists)
@@ -162,6 +163,7 @@ class InferenceService:
                 "num_max_points": num_max_points,
                 "show_cameras": show_cameras,
                 "feat_vis_fps": feat_vis_fps,
+                "infer_gs": "gs" in export_format,
             }
 
             # Run inference
@@ -211,6 +213,7 @@ class InferenceService:
             "num_max_points": num_max_points,
             "show_cameras": show_cameras,
             "feat_vis_fps": feat_vis_fps,
+            "infer_gs": "gs" in export_format,
         }
 
         # Add pose data (if exists)
