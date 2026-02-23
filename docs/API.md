@@ -27,7 +27,7 @@ Here are quick examples to get you started:
 
 ### 🚀 Basic Depth Estimation
 ```python
-from depth_anything_3 import DepthAnything3
+from depth_anything_3.api import DepthAnything3
 
 # Initialize and run inference
 model = DepthAnything3.from_pretrained("depth-anything/DA3NESTED-GIANT-LARGE").to("cuda")
@@ -272,20 +272,27 @@ These parameters are passed directly to the `inference()` method and only apply 
 - **Type**: `int`
 - **Description**: Frame rate for the output video when visualizing features across multiple images.
 
-#### `export_kwargs` (default: `{}`)
-- **Type**: `dict[str, Any]`
-- **Description**: Additional keyword arguments passed to specific export functions. Different export formats accept different parameters.
-- **Example**:
-  ```python
-  export_kwargs = {
-      "trj_mode": "interpolate_smooth",  # For gs_video
-      "gs_views_interval": 1,            # For gs_ply
-      "conf_thresh_percentile": 30.0,    # For glb
-      "num_max_points": 500000,          # For glb
-      "show_cameras": True,              # For glb
-      "fps": 15                          # For feat_vis
-  }
-  ```
+#### ✨🎥 3DGS and 3DGS Video Parameters
+
+These parameters are passed directly to the `inference()` method and only apply when `export_format` includes `"gs_ply"` or `"gs_video"`.
+
+##### `export_kwargs` (default: `{}`)
+- Type: `dict[str, dict[str, Any]]`
+- Description: Per-format extra arguments passed to export functions, mainly for `"gs_ply"` and `"gs_video"`.
+  - Access pattern: `export_kwargs[export_format][key] = value`
+  - Example:
+    ```python
+    {
+        "gs_ply": {
+            "gs_views_interval": 1,
+        },
+        "gs_video": {
+            "trj_mode": "interpolate_smooth",
+            "chunk_size": 1,
+            "vis_depth": None,
+        },
+    }
+    ```
 
 ## 📤 Export Formats
 
@@ -382,7 +389,7 @@ The `inference()` method returns a `Prediction` object with the following attrib
 
 ### 📷 Camera Parameters
 
-- **extrinsics**: `np.ndarray` - Camera extrinsic matrices with shape `(N, 4, 4)` representing world-to-camera transformations. Only present if camera poses were estimated or provided as input.
+- **extrinsics**: `np.ndarray` - Camera extrinsic matrices with shape `(N, 3, 4)` representing world-to-camera transformations. Only present if camera poses were estimated or provided as input.
 - **intrinsics**: `np.ndarray` - Camera intrinsic matrices with shape `(N, 3, 3)` containing focal length and principal point information. Only present if poses were estimated or provided as input.
 
 ### 🎁 Additional Outputs

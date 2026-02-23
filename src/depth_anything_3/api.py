@@ -264,7 +264,7 @@ class DepthAnything3(nn.Module, PyTorchModelHubMixin):
         process_res: int = 504,
         process_res_method: str = "upper_bound_resize",
         timing: Optional[TimingBreakdown] = None,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
         """Preprocess input images using input processor."""
         start_time = time.time()
         imgs_cpu, extrinsics, intrinsics = self.input_processor(
@@ -300,8 +300,8 @@ class DepthAnything3(nn.Module, PyTorchModelHubMixin):
     def _prepare_model_inputs(
         self,
         imgs_cpu: torch.Tensor,
-        extrinsics: torch.tensor | None,
-        intrinsics: torch.tensor | None,
+        extrinsics: torch.Tensor | None,
+        intrinsics: torch.Tensor | None,
         num_frames: int = 1,
         timing: Optional[TimingBreakdown] = None,
     ) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
@@ -333,7 +333,7 @@ class DepthAnything3(nn.Module, PyTorchModelHubMixin):
 
         return imgs, ex_t, in_t
 
-    def _normalize_extrinsics(self, ex_t: torch.Tensor, timing: Optional[TimingBreakdown] = None) -> torch.Tensor:
+    def _normalize_extrinsics(self, ex_t: torch.Tensor | None, timing: Optional[TimingBreakdown] = None) -> torch.Tensor | None:
         """Normalize extrinsics"""
         if ex_t is None:
             return None
@@ -354,8 +354,8 @@ class DepthAnything3(nn.Module, PyTorchModelHubMixin):
 
     def _align_to_input_extrinsics_intrinsics(
         self,
-        extrinsics: torch.Tensor,
-        intrinsics: torch.Tensor,
+        extrinsics: torch.Tensor | None,
+        intrinsics: torch.Tensor | None,
         prediction: Prediction,
         align_to_input_ext_scale: bool = True,
         ransac_view_thresh: int = 10,
