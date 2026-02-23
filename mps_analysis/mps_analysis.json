@@ -1,0 +1,140 @@
+{
+  "model": "DA3-BASE",
+  "device": "mps",
+  "pytorch_version": "2.9.1",
+  "features": {
+    "sdpa_available": true,
+    "compile_available": true
+  },
+  "timing": {
+    "num_frames": 10,
+    "mean": {
+      "preprocessing": {
+        "image_loading_ms": 0.65,
+        "image_resize_ms": 0.49,
+        "image_normalization_ms": 0.49,
+        "camera_preprocessing_ms": 0.0,
+        "total_ms": 1.63
+      },
+      "input_preparation": {
+        "to_device_ms": 0.02,
+        "extrinsics_normalization_ms": 0.0,
+        "total_ms": 0.02
+      },
+      "model_forward": {
+        "total_ms": 123.03,
+        "backbone_forward_ms": 0.0,
+        "head_forward_ms": 0.0,
+        "camera_encoder_ms": 0.0,
+        "camera_decoder_ms": 0.0,
+        "gs_adapter_ms": 0.0
+      },
+      "postprocessing": {
+        "output_to_cpu_ms": 2.02,
+        "depth_postprocessing_ms": 0.0,
+        "pose_alignment_ms": 0.0,
+        "prediction_conversion_ms": 46.03,
+        "total_ms": 48.05
+      },
+      "export_ms": 0.0,
+      "sync_overhead_ms": 0.0,
+      "total_ms": 172.73
+    },
+    "min": {
+      "preprocessing": {
+        "image_loading_ms": 0.56,
+        "image_resize_ms": 0.42,
+        "image_normalization_ms": 0.42,
+        "camera_preprocessing_ms": 0.0,
+        "total_ms": 1.4
+      },
+      "input_preparation": {
+        "to_device_ms": 0.01,
+        "extrinsics_normalization_ms": 0.0,
+        "total_ms": 0.01
+      },
+      "model_forward": {
+        "total_ms": 115.57,
+        "backbone_forward_ms": 0.0,
+        "head_forward_ms": 0.0,
+        "camera_encoder_ms": 0.0,
+        "camera_decoder_ms": 0.0,
+        "gs_adapter_ms": 0.0
+      },
+      "postprocessing": {
+        "output_to_cpu_ms": 0.19,
+        "depth_postprocessing_ms": 0.0,
+        "pose_alignment_ms": 0.0,
+        "prediction_conversion_ms": 44.67,
+        "total_ms": 45.0
+      },
+      "export_ms": 0.0,
+      "sync_overhead_ms": 0.0,
+      "total_ms": 163.43
+    },
+    "max": {
+      "preprocessing": {
+        "image_loading_ms": 0.75,
+        "image_resize_ms": 0.56,
+        "image_normalization_ms": 0.56,
+        "camera_preprocessing_ms": 0.0,
+        "total_ms": 1.88
+      },
+      "input_preparation": {
+        "to_device_ms": 0.02,
+        "extrinsics_normalization_ms": 0.0,
+        "total_ms": 0.02
+      },
+      "model_forward": {
+        "total_ms": 178.33,
+        "backbone_forward_ms": 0.0,
+        "head_forward_ms": 0.0,
+        "camera_encoder_ms": 0.0,
+        "camera_decoder_ms": 0.0,
+        "gs_adapter_ms": 0.0
+      },
+      "postprocessing": {
+        "output_to_cpu_ms": 17.91,
+        "depth_postprocessing_ms": 0.0,
+        "pose_alignment_ms": 0.0,
+        "prediction_conversion_ms": 47.56,
+        "total_ms": 64.18
+      },
+      "export_ms": 0.0,
+      "sync_overhead_ms": 0.0,
+      "total_ms": 227.86
+    },
+    "std": {
+      "preprocessing": {
+        "image_loading_ms": 0.05,
+        "image_resize_ms": 0.04,
+        "image_normalization_ms": 0.04,
+        "camera_preprocessing_ms": 0.0,
+        "total_ms": 0.14
+      },
+      "input_preparation": {
+        "to_device_ms": 0.0,
+        "extrinsics_normalization_ms": 0.0,
+        "total_ms": 0.0
+      },
+      "model_forward": {
+        "total_ms": 18.47,
+        "backbone_forward_ms": 0.0,
+        "head_forward_ms": 0.0,
+        "camera_encoder_ms": 0.0,
+        "camera_decoder_ms": 0.0,
+        "gs_adapter_ms": 0.0
+      },
+      "postprocessing": {
+        "output_to_cpu_ms": 5.3,
+        "depth_postprocessing_ms": 0.0,
+        "pose_alignment_ms": 0.0,
+        "prediction_conversion_ms": 0.82,
+        "total_ms": 5.43
+      },
+      "export_ms": 0.0,
+      "sync_overhead_ms": 0.0,
+      "total_ms": 19.07
+    }
+  }
+}

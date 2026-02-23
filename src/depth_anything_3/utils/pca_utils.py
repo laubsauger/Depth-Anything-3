@@ -86,7 +86,7 @@ def pca_to_rgb_4d_bf16_percentile(
     low = clip_percent / 100.0
     high = 1.0 - low
 
-    with torch.no_grad():
+    with torch.inference_mode():
         # Zero mean
         mean = X.mean(dim=0, keepdim=True)
         Xc = X - mean

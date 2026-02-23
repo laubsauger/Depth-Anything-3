@@ -1,0 +1,77 @@
+# Quick Benchmark Configuration
+# Tests all three model sizes with single camera, standard settings
+# Estimated time: ~15 minutes on MPS
+
+name: "Quick Performance Benchmark"
+description: "Quick benchmark testing DA3-SMALL, DA3-BASE, DA3-LARGE with default settings"
+
+# Test data (optional - will generate synthetic if not provided)
+# input_video: "path/to/test_video.mp4"
+# input_images: "path/to/test_images/"
+
+output_dir: "benchmark_results/quick"
+
+# Baseline for comparison
+compare_against_baseline: true
+baseline_scenario_name: "DA3-BASE_1cam_512x512_fp32"
+
+scenarios:
+  - name: "DA3-SMALL_1cam_512x512_fp32"
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+      description: "80M params - Fastest"
+    num_cameras: 1
+    resolution: [504, 504]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    stream_config:
+      window_size: null  # Auto-detect based on device
+      overlap: null
+      buffer_size: null
+      output_latency_frames: 0
+    num_frames: 100
+    warmup_frames: 5
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-BASE_1cam_512x512_fp32"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+      description: "120M params - Balanced"
+    num_cameras: 1
+    resolution: [504, 504]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    stream_config:
+      window_size: null  # Auto-detect based on device
+      overlap: null
+      buffer_size: null
+      output_latency_frames: 0
+    num_frames: 100
+    warmup_frames: 5
+    save_depth_maps: true
+    save_comparison_video: true
+
+  # - name: "DA3-LARGE_1cam_512x512_fp32"
+  #   model:
+  #     name: "DA3-LARGE"
+  #     model_dir: "depth-anything/DA3-LARGE"
+  #     description: "350M params - Highest quality"
+  #   num_cameras: 1
+  #   resolution: [512, 512]
+  #   precision: "fp32"
+  #   device: "mps"
+  #   process_res: 504
+  #   stream_config:
+  #     window_size: null
+  #     overlap: null
+  #     buffer_size: null
+  #     output_latency_frames: 2
+  #   num_frames: 50
+  #   warmup_frames: 5
+  #   save_depth_maps: true
+  #   save_comparison_video: true

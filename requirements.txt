@@ -7,7 +7,7 @@ huggingface_hub
 imageio
 numpy<2
 opencv-python
-xformers
+# xformers  # Not compatible with macOS - see https://github.com/ByteDance-Seed/Depth-Anything-3/issues/11
 open3d
 fastapi
 unicorn
@@ -21,3 +21,7 @@ moviepy
 plyfile
 pillow_heif
 safetensors
+psutil
+pyyaml
+tqdm
+matplotlib

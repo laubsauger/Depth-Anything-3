@@ -1,0 +1,129 @@
+# Backend Reuse Example
+#
+# This configuration demonstrates backend reuse for efficient benchmarking.
+# By using the backend service, the model stays loaded in GPU memory across
+# all scenarios, eliminating costly reload overhead.
+#
+# Benefits:
+# - Much faster when testing multiple scenarios with the same model
+# - Consistent performance across scenarios
+# - Lower memory fragmentation
+#
+# Usage:
+#   # Option 1: Auto-start and auto-stop backend
+#   da3 benchmark --config benchmarks/example_backend_reuse.yaml
+#
+#   # Option 2: Manually start backend first
+#   da3 backend --model-dir depth-anything/DA3-BASE --device mps
+#   da3 benchmark --config benchmarks/example_backend_reuse.yaml
+
+name: "Backend Reuse Benchmark"
+description: "Tests backend reuse efficiency across multiple scenarios with DA3-BASE"
+
+# Test data
+input_video: null  # "path/to/test_video.mp4"
+
+output_dir: "benchmark_results/backend_reuse"
+
+compare_against_baseline: true
+baseline_scenario_name: "DA3-BASE_512x512"
+
+# Backend configuration
+use_backend: true
+backend_url: "http://localhost:8008"
+start_backend: true  # Auto-start backend with first scenario's model
+stop_backend: true   # Auto-stop backend when done
+
+scenarios:
+  # ========================================================================
+  # All scenarios use DA3-BASE - model stays loaded!
+  # ========================================================================
+
+  - name: "DA3-BASE_512x512"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+      description: "120M params - Any-view"
+    num_cameras: 1
+    resolution: [512, 512]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    test_pose_estimation: false
+    test_pose_conditioned: false
+
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-BASE_1024x1024"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+      description: "120M params - Higher resolution"
+    num_cameras: 1
+    resolution: [1024, 1024]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    test_pose_estimation: false
+    test_pose_conditioned: false
+
+    save_depth_maps: false
+    save_comparison_video: true
+
+  - name: "DA3-BASE_256x256"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+      description: "120M params - Lower resolution for speed"
+    num_cameras: 1
+    resolution: [256, 256]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    test_pose_estimation: false
+    test_pose_conditioned: false
+
+    save_depth_maps: false
+    save_comparison_video: true
+
+  - name: "DA3-BASE_different_frame_counts"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+      description: "120M params - Testing with 100 frames"
+    num_cameras: 1
+    resolution: [512, 512]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 100
+    warmup_frames: 10
+
+    test_pose_estimation: false
+    test_pose_conditioned: false
+
+    save_depth_maps: false
+    save_comparison_video: false
+
+# Expected Results:
+# ================
+# With backend reuse:
+#   - First scenario: ~10s (includes model load time)
+#   - Subsequent scenarios: ~5-8s each (no model reload!)
+#   - Total: ~30-40s for all 4 scenarios
+#
+# Without backend reuse:
+#   - Each scenario: ~10s (model reload every time)
+#   - Total: ~40-50s for all 4 scenarios
+#
+# Backend reuse saves time and reduces memory fragmentation!

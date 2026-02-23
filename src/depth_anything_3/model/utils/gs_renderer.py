@@ -34,11 +34,19 @@ from depth_anything_3.utils.logger import logger
 try:
     from gsplat import rasterization
 except ImportError:
-    logger.warn(
-        "Dependency `gsplat` is required for rendering 3DGS. "
-        "Install via: pip install git+https://github.com/nerfstudio-project/"
-        "gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70"
-    )
+    import platform
+    if platform.system() == "Darwin":  # macOS
+        logger.warn(
+            "Dependency `gsplat` is required for rendering 3DGS. "
+            "On macOS, install gsplat-mps via: "
+            "pip install --no-build-isolation git+https://github.com/iffyloop/gsplat-mps.git"
+        )
+    else:  # Linux/Windows
+        logger.warn(
+            "Dependency `gsplat` is required for rendering 3DGS. "
+            "Install via: pip install git+https://github.com/nerfstudio-project/"
+            "gsplat.git@0b4dddf04cb687367602c01196913cde6a743d70"
+        )
 
 
 def render_3dgs(

@@ -137,7 +137,11 @@ class DepthAnything3Net(nn.Module):
                 output = self._process_gs_head(feats, H, W, output, x, extrinsics, intrinsics)
 
         # Extract auxiliary features if requested
-        output.aux = self._extract_auxiliary_features(aux_feats, export_feat_layers, H, W)
+        # Skip if no layers specified (saves GPU→CPU transfer time)
+        if export_feat_layers:
+            output.aux = self._extract_auxiliary_features(aux_feats, export_feat_layers, H, W)
+        else:
+            output.aux = Dict()  # Empty dict, no features
 
         return output
 

@@ -34,3 +34,9 @@ input_images*/
 src/debug_main.py
 temp*.png
 /outputs
+
+
+.claude/
+CLAUDE.md
+.lh/
+benchmark_results/

@@ -210,7 +210,7 @@ class EventHandlers:
                 )
                 selected_first_frame = ""  # Reset to use default order
 
-        with torch.no_grad():
+        with torch.inference_mode():
             prediction, processed_data = self.model_inference.run_inference(
                 target_dir,
                 process_res_method=process_res_method,

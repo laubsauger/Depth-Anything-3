@@ -1,0 +1,156 @@
+# Pose Estimation Benchmark Configuration
+#
+# Tests camera pose estimation and pose-conditioned depth estimation.
+# This demonstrates DA3's ability to:
+# 1. Estimate camera extrinsics and intrinsics from images
+# 2. Use estimated poses to improve depth consistency (pose-conditioned depth)
+#
+# Estimated time: ~10-15 minutes on MPS
+
+name: "Pose Estimation & Pose-Conditioned Depth Benchmark"
+description: "Tests pose estimation accuracy and pose-conditioned depth consistency"
+
+# Test data
+# IMPORTANT: Provide a video with camera motion for meaningful pose estimation
+# Good examples: handheld video, drone footage, rotating object
+input_video: null  # "path/to/video_with_camera_motion.mp4"
+# input_images: "path/to/image_sequence/"
+
+output_dir: "benchmark_results/pose_estimation"
+
+compare_against_baseline: true
+baseline_scenario_name: "DA3-BASE_pose_estimation"
+
+scenarios:
+  # ========================================================================
+  # Baseline: Standard depth estimation (no pose)
+  # ========================================================================
+
+  - name: "DA3-BASE_standard"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+      description: "Baseline without pose estimation"
+    num_cameras: 1
+    resolution: [512, 512]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    # Pose configuration - OFF
+    test_pose_estimation: false
+    test_pose_conditioned: false
+    align_to_input_ext_scale: false
+
+    # Output
+    save_depth_maps: true
+    save_comparison_video: true
+    save_pose_visualization: false
+
+  # ========================================================================
+  # Test 1: Pose Estimation Only
+  # ========================================================================
+
+  - name: "DA3-BASE_pose_estimation"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+      description: "With pose estimation"
+    num_cameras: 1
+    resolution: [512, 512]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    # Pose configuration - Estimate poses
+    test_pose_estimation: true  # Estimate camera poses from images
+    test_pose_conditioned: false  # Don't use them for depth yet
+    align_to_input_ext_scale: false
+
+    # Output
+    save_depth_maps: true
+    save_comparison_video: true
+    save_pose_visualization: true  # Visualize estimated camera trajectory
+
+  # ========================================================================
+  # Test 2: Pose-Conditioned Depth
+  # ========================================================================
+
+  - name: "DA3-BASE_pose_conditioned"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+      description: "With pose-conditioned depth"
+    num_cameras: 1
+    resolution: [512, 512]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    # Pose configuration - Estimate and USE poses
+    test_pose_estimation: true  # Estimate camera poses
+    test_pose_conditioned: true  # Use estimated poses to improve depth consistency
+    align_to_input_ext_scale: true  # Align depth scale to estimated poses
+
+    # Output
+    save_depth_maps: true
+    save_comparison_video: true
+    save_pose_visualization: true
+
+  # ========================================================================
+  # Test 3: DA3-SMALL comparison (faster model)
+  # ========================================================================
+
+  - name: "DA3-SMALL_pose_conditioned"
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+      description: "Smaller model with pose conditioning"
+    num_cameras: 1
+    resolution: [512, 512]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    # Pose configuration
+    test_pose_estimation: true
+    test_pose_conditioned: true
+    align_to_input_ext_scale: true
+
+    # Output
+    save_depth_maps: false  # Skip to save time
+    save_comparison_video: true
+    save_pose_visualization: true
+
+  # ========================================================================
+  # Optional: LARGE model (commented out - very slow)
+  # ========================================================================
+
+  # - name: "DA3-LARGE_pose_conditioned"
+  #   model:
+  #     name: "DA3-LARGE"
+  #     model_dir: "depth-anything/DA3-LARGE"
+  #     description: "Highest quality with pose conditioning"
+  #   num_cameras: 1
+  #   resolution: [512, 512]
+  #   precision: "fp32"
+  #   device: "mps"
+  #   process_res: 504
+  #   num_frames: 50
+  #   warmup_frames: 5
+  #
+  #   test_pose_estimation: true
+  #   test_pose_conditioned: true
+  #   align_to_input_ext_scale: true
+  #
+  #   save_depth_maps: true
+  #   save_comparison_video: true
+  #   save_pose_visualization: true

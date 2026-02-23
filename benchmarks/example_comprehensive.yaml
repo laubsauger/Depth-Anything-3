@@ -1,0 +1,309 @@
+# Comprehensive Benchmark Configuration
+# Tests multiple models with various processing resolutions.
+#
+# IMPORTANT: This config uses explicit process_res values that are multiples
+# of 14 (ViT patch size). See RESOLUTION_GUIDE.md for full details.
+#
+# Estimated time: ~30-45 min on MPS
+
+name: "Comprehensive Streaming Benchmark"
+description: "Full benchmark testing models across resolutions with proper divisibility"
+
+# Provide your own test video for realistic results
+# input_video: "path/to/test_video.mp4"
+
+output_dir: "benchmark_results/comprehensive"
+
+compare_against_baseline: true
+baseline_scenario_name: "DA3-BASE_504"
+
+scenarios:
+  # ========================================================================
+  # DA3-SMALL Tests
+  # Resolution: 252, 378, 504 (all multiples of 14)
+  # ========================================================================
+
+  - name: "DA3-SMALL_252"  # Fast - 18×14
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [512, 512]  # Input frame upper bound
+    process_res: 252        # Actual model processing
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-SMALL_378"  # Medium - 27×14
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 378
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 10
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-SMALL_504"  # Standard - 36×14
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 504
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-SMALL_756"  # Standard - 36×14
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [1024, 1024]
+    process_res: 756
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    save_depth_maps: true
+    save_comparison_video: true
+
+  # ========================================================================
+  # DA3-BASE Tests
+  # ========================================================================
+
+  - name: "DA3-BASE_252"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 252
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 10
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-BASE_504"
+    model:
+      name: "DA3-BASE"
+      model_dir: "depth-anything/DA3-BASE"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 504
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    save_depth_maps: true
+    save_comparison_video: true
+
+  # - name: "DA3-BASE_630"  # Higher quality - 45×14
+  #   model:
+  #     name: "DA3-BASE"
+  #     model_dir: "depth-anything/DA3-BASE"
+  #   num_cameras: 1
+  #   resolution: [1024, 1024]
+  #   process_res: 630
+  #   precision: "fp32"
+  #   device: "mps"
+  #   num_frames: 100
+  #   warmup_frames: 5
+  #   save_depth_maps: false
+  #   save_comparison_video: true
+
+  # ========================================================================
+  # Frame Sampling Tests
+  # ========================================================================
+
+  - name: "DA3-SMALL_504_sample2"  # Every other frame
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [1024, 1024]
+    process_res: 504
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    sample_every_n_frames: 2
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-SMALL_504_sample5"  # Every 5th frame
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 504
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    sample_every_n_frames: 5
+    save_depth_maps: true
+    save_comparison_video: true
+
+  # ========================================================================
+  # Window Size Tests
+  # ========================================================================
+
+  - name: "DA3-SMALL_504_win1"
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 504
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    stream_config:
+      window_size: 1
+      overlap: 0
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-SMALL_504_win4"
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 504
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    stream_config:
+      window_size: 4
+      overlap: 1
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-SMALL_504_win8"
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 504
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    stream_config:
+      window_size: 8
+      overlap: 2
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-SMALL_504_win16"
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 504
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    stream_config:
+      window_size: 16
+      overlap: 6
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3-SMALL_504_win24"
+    model:
+      name: "DA3-SMALL"
+      model_dir: "depth-anything/DA3-SMALL"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 504
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    stream_config:
+      window_size: 32
+      overlap: 12
+    save_depth_maps: true
+    save_comparison_video: false
+
+  # ========================================================================
+  # DA3-LARGE Tests (commented out - slow)
+  # ========================================================================
+
+  - name: "DA3-LARGE_252"
+    model:
+      name: "DA3-LARGE"
+      model_dir: "depth-anything/DA3-LARGE"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 252
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    save_depth_maps: true
+    save_comparison_video: true
+
+  # - name: "DA3-LARGE_504"
+  #   model:
+  #     name: "DA3-LARGE"
+  #     model_dir: "depth-anything/DA3-LARGE"
+  #   num_cameras: 1
+  #   resolution: [512, 512]
+  #   process_res: 504
+  #   precision: "fp32"
+  #   device: "mps"
+  #   num_frames: 100
+  #   warmup_frames: 5
+  #   save_depth_maps: true
+  #   save_comparison_video: true
+
+  # ========================================================================
+  # DA3-GIANT Tests (commented out - slow)
+  # ========================================================================
+
+  - name: "DA3-GIANT_252"
+    model:
+      name: "DA3-GIANT"
+      model_dir: "depth-anything/DA3-GIANT"
+    num_cameras: 1
+    resolution: [512, 512]
+    process_res: 252
+    precision: "fp32"
+    device: "mps"
+    num_frames: 100
+    warmup_frames: 5
+    save_depth_maps: true
+    save_comparison_video: true
+
+# Expected Results (MPS/M1):
+# ==========================
+# DA3-SMALL_252:  15-20 FPS (fast!)
+# DA3-SMALL_378:  10-12 FPS
+# DA3-SMALL_504:  6-8 FPS
+#
+# DA3-BASE_252:   8-10 FPS
+# DA3-BASE_504:   4-6 FPS
+# DA3-BASE_630:   2-4 FPS (slower, better quality)

@@ -20,11 +20,13 @@ Clean, modular command-line interface
 from __future__ import annotations
 
 import os
+import torch
 import typer
 
 from depth_anything_3.services import start_server
 from depth_anything_3.services.gallery import gallery as gallery_main
 from depth_anything_3.services.inference_service import run_inference
+from depth_anything_3.services.stream_server import start_stream_server
 from depth_anything_3.services.input_handlers import (
     ColmapHandler,
     ImageHandler,
@@ -43,6 +45,16 @@ from depth_anything_3.utils.constants import (
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 app = typer.Typer(help="Depth Anything 3 - Video depth estimation CLI", add_completion=False)
+
+
+def get_default_device() -> str:
+    """Auto-detect the best available device."""
+    if torch.cuda.is_available():
+        return "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        return "mps"
+    else:
+        return "cpu"
 
 
 # ============================================================================
@@ -116,7 +128,7 @@ def auto(
     model_dir: str = typer.Option(DEFAULT_MODEL, help="Model directory path"),
     export_dir: str = typer.Option(DEFAULT_EXPORT_DIR, help="Export directory"),
     export_format: str = typer.Option("glb", help="Export format"),
-    device: str = typer.Option("cuda", help="Device to use"),
+    device: str = typer.Option(None, help="Device to use (auto-detects if not specified)"),
     use_backend: bool = typer.Option(False, help="Use backend service for inference"),
     backend_url: str = typer.Option(
         "http://localhost:8008", help="Backend URL (default: http://localhost:8008)"
@@ -302,7 +314,7 @@ def image(
     model_dir: str = typer.Option(DEFAULT_MODEL, help="Model directory path"),
     export_dir: str = typer.Option(DEFAULT_EXPORT_DIR, help="Export directory"),
     export_format: str = typer.Option("glb", help="Export format"),
-    device: str = typer.Option("cuda", help="Device to use"),
+    device: str = typer.Option(None, help="Device to use (auto-detects if not specified)"),
     use_backend: bool = typer.Option(False, help="Use backend service for inference"),
     backend_url: str = typer.Option(
         "http://localhost:8008", help="Backend URL (default: http://localhost:8008)"
@@ -371,7 +383,7 @@ def images(
     model_dir: str = typer.Option(DEFAULT_MODEL, help="Model directory path"),
     export_dir: str = typer.Option(DEFAULT_EXPORT_DIR, help="Export directory"),
     export_format: str = typer.Option("glb", help="Export format"),
-    device: str = typer.Option("cuda", help="Device to use"),
+    device: str = typer.Option(None, help="Device to use (auto-detects if not specified)"),
     use_backend: bool = typer.Option(False, help="Use backend service for inference"),
     backend_url: str = typer.Option(
         "http://localhost:8008", help="Backend URL (default: http://localhost:8008)"
@@ -445,7 +457,7 @@ def colmap(
     model_dir: str = typer.Option(DEFAULT_MODEL, help="Model directory path"),
     export_dir: str = typer.Option(DEFAULT_EXPORT_DIR, help="Export directory"),
     export_format: str = typer.Option("glb", help="Export format"),
-    device: str = typer.Option("cuda", help="Device to use"),
+    device: str = typer.Option(None, help="Device to use (auto-detects if not specified)"),
     use_backend: bool = typer.Option(False, help="Use backend service for inference"),
     backend_url: str = typer.Option(
         "http://localhost:8008", help="Backend URL (default: http://localhost:8008)"
@@ -515,7 +527,7 @@ def video(
     model_dir: str = typer.Option(DEFAULT_MODEL, help="Model directory path"),
     export_dir: str = typer.Option(DEFAULT_EXPORT_DIR, help="Export directory"),
     export_format: str = typer.Option("glb", help="Export format"),
-    device: str = typer.Option("cuda", help="Device to use"),
+    device: str = typer.Option(None, help="Device to use (auto-detects if not specified)"),
     use_backend: bool = typer.Option(False, help="Use backend service for inference"),
     backend_url: str = typer.Option(
         "http://localhost:8008", help="Backend URL (default: http://localhost:8008)"
@@ -583,17 +595,35 @@ def video(
 @app.command()
 def backend(
     model_dir: str = typer.Option(DEFAULT_MODEL, help="Model directory path"),
-    device: str = typer.Option("cuda", help="Device to use"),
+    device: str = typer.Option(None, help="Device to use (auto-detects if not specified)"),
     host: str = typer.Option("127.0.0.1", help="Host to bind to"),
     port: int = typer.Option(8008, help="Port to bind to"),
     gallery_dir: str = typer.Option(DEFAULT_GALLERY_DIR, help="Gallery directory path (optional)"),
+    log_level: str = typer.Option("INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)"),
 ):
     """Start model backend service with integrated gallery."""
+    import logging
+
+    # Configure logging
+    log_level_map = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+    }
+    numeric_level = log_level_map.get(log_level.upper(), logging.INFO)
+    logging.basicConfig(
+        level=numeric_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
     typer.echo("=" * 60)
     typer.echo("🚀 Starting Depth Anything 3 Backend Server")
     typer.echo("=" * 60)
     typer.echo(f"Model directory: {model_dir}")
     typer.echo(f"Device: {device}")
+    typer.echo(f"Log level: {log_level.upper()}")
 
     # Check if gallery directory exists
     if gallery_dir and os.path.exists(gallery_dir):
@@ -740,6 +770,275 @@ def gallery(
         typer.echo("\nGallery server stopped.")
     except Exception as e:
         typer.echo(f"Failed to launch Gallery server: {e}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def benchmark(
+    config: str = typer.Option(None, help="Path to benchmark YAML config file"),
+    output_dir: str = typer.Option("benchmark_results", help="Output directory for results"),
+    input_video: str = typer.Option(None, help="Path to test video (overrides config)"),
+    device: str = typer.Option(None, help="Device to use (overrides config)"),
+    create_default: bool = typer.Option(False, help="Create default benchmark config and exit"),
+    num_frames: int = typer.Option(100, help="Number of frames to test (for default config)"),
+    use_backend: bool = typer.Option(False, help="Use backend service for inference"),
+    backend_url: str = typer.Option("http://localhost:8008", help="Backend service URL"),
+    start_backend: bool = typer.Option(False, help="Auto-start backend service"),
+    stop_backend: bool = typer.Option(False, help="Auto-stop backend service after completion"),
+):
+    """
+    Run streaming benchmarks to compare models and configurations.
+
+    This command benchmarks different model sizes (DA3-SMALL, DA3-BASE, DA3-LARGE)
+    with various configurations (resolutions, precisions, multi-camera setups) and
+    generates comprehensive reports with performance metrics and visualizations.
+
+    Example usage:
+        # Create default benchmark config
+        da3 benchmark --create-default --output-dir my_benchmark
+
+        # Run benchmark with custom config
+        da3 benchmark --config benchmark_config.yaml
+
+        # Run default benchmark
+        da3 benchmark --input-video test.mp4 --device mps --num-frames 100
+    """
+    from pathlib import Path
+    from depth_anything_3.benchmarking import (
+        BenchmarkConfig,
+        BenchmarkRunner,
+        ReportGenerator,
+        create_default_benchmark_config,
+    )
+
+    # Handle create-default flag
+    if create_default:
+        output_path = Path(output_dir) / "benchmark_config.yaml"
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Auto-detect device
+        detected_device = device or get_default_device()
+
+        # Create default config
+        default_config = create_default_benchmark_config(
+            name="Default Streaming Benchmark",
+            input_video=Path(input_video) if input_video else None,
+            device=detected_device,
+        )
+
+        # Save to YAML
+        default_config.save_to_yaml(output_path)
+        typer.echo(f"✅ Created default benchmark config: {output_path}")
+        typer.echo(f"\nEdit the config file and run:")
+        typer.echo(f"  da3 benchmark --config {output_path}")
+        return
+
+    # Load config from file or create default
+    if config:
+        typer.echo(f"📋 Loading benchmark config from: {config}")
+        benchmark_config = BenchmarkConfig.from_yaml(Path(config))
+    else:
+        typer.echo("📋 No config provided, creating default benchmark")
+        detected_device = device or get_default_device()
+        benchmark_config = create_default_benchmark_config(
+            name="Quick Streaming Benchmark",
+            input_video=Path(input_video) if input_video else None,
+            device=detected_device,
+        )
+
+        # Update output dir if specified
+        if output_dir != "benchmark_results":
+            benchmark_config.output_dir = Path(output_dir)
+
+        # Update num_frames for all scenarios
+        for scenario in benchmark_config.scenarios:
+            scenario.num_frames = num_frames
+
+    # Override device if specified
+    if device:
+        for scenario in benchmark_config.scenarios:
+            scenario.device = device
+
+    # Override input video if specified
+    if input_video:
+        benchmark_config.input_video = Path(input_video)
+
+    # Override backend settings if specified
+    if use_backend:
+        benchmark_config.use_backend = True
+        benchmark_config.backend_url = backend_url
+        benchmark_config.start_backend = start_backend
+        benchmark_config.stop_backend = stop_backend
+
+    # Display config
+    typer.echo("\n" + "=" * 70)
+    typer.echo(f"🚀 {benchmark_config.name}")
+    typer.echo("=" * 70)
+    if benchmark_config.description:
+        typer.echo(f"📝 {benchmark_config.description}")
+    typer.echo(f"📁 Output: {benchmark_config.output_dir}")
+    if benchmark_config.input_video:
+        typer.echo(f"🎥 Input video: {benchmark_config.input_video}")
+    if benchmark_config.use_backend:
+        typer.echo(f"🔌 Backend: {benchmark_config.backend_url}")
+        if benchmark_config.start_backend:
+            typer.echo(f"   Auto-start: ✅")
+        if benchmark_config.stop_backend:
+            typer.echo(f"   Auto-stop: ✅")
+    typer.echo(f"📊 Scenarios: {len(benchmark_config.scenarios)}")
+    for scenario in benchmark_config.scenarios:
+        typer.echo(f"   - {scenario.name}")
+    typer.echo("=" * 70)
+    typer.echo()
+
+    # Confirm before starting
+    if not typer.confirm("Start benchmark?"):
+        typer.echo("❌ Benchmark cancelled")
+        raise typer.Exit(0)
+
+    # Run benchmark
+    try:
+        runner = BenchmarkRunner(benchmark_config)
+        results = runner.run_all()
+
+        # Generate report
+        typer.echo("\n" + "=" * 70)
+        typer.echo("📊 Generating HTML report...")
+        typer.echo("=" * 70)
+
+        report_gen = ReportGenerator(benchmark_config.output_dir)
+        report_path = report_gen.generate(
+            results,
+            benchmark_config.name,
+            benchmark_config.description,
+        )
+
+        # Display summary
+        typer.echo("\n" + "=" * 70)
+        typer.echo("✅ Benchmark Complete!")
+        typer.echo("=" * 70)
+        typer.echo(f"📄 HTML Report: {report_path}")
+        typer.echo(f"📁 Results: {benchmark_config.output_dir}")
+        typer.echo()
+
+        # Display quick summary
+        typer.echo("Quick Summary:")
+        for result in results:
+            typer.echo(f"  {result.scenario_name}:")
+            typer.echo(f"    - FPS: {result.avg_fps:.2f} (min: {result.min_fps:.2f}, max: {result.max_fps:.2f})")
+            typer.echo(f"    - Latency: {result.avg_latency_ms:.2f}ms (p95: {result.p95_latency_ms:.2f}ms)")
+            typer.echo(f"    - Memory: {result.avg_memory_mb:.2f}MB (peak: {result.max_memory_mb:.2f}MB)")
+            typer.echo()
+
+        typer.echo(f"🌐 Open report in browser:")
+        typer.echo(f"  open {report_path}")
+
+    except KeyboardInterrupt:
+        typer.echo("\n⏸️  Benchmark interrupted")
+        raise typer.Exit(1)
+    except Exception as e:
+        typer.echo(f"\n❌ Benchmark failed: {e}")
+        import traceback
+        traceback.print_exc()
+        raise typer.Exit(1)
+
+
+@app.command()
+def stream(
+    model_dir: str = typer.Option(DEFAULT_MODEL, help="Model directory path"),
+    device: str = typer.Option(None, help="Device to use (auto-detects if not specified)"),
+    host: str = typer.Option("0.0.0.0", help="Host to bind to"),
+    port: int = typer.Option(8080, help="Port to bind to"),
+    process_res: int = typer.Option(504, help="Processing resolution (rounded to nearest multiple of 14)"),
+    window_size: int = typer.Option(None, help="Default window size (frames per processing window)"),
+    overlap: int = typer.Option(None, help="Default overlap between windows"),
+    buffer_size: int = typer.Option(None, help="Default buffer size before processing"),
+    max_fps: float = typer.Option(None, help="Default max FPS limit"),
+    quality: int = typer.Option(85, help="Default JPEG quality for depth output (0-100)"),
+    log_level: str = typer.Option("INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)"),
+):
+    """
+    Start real-time streaming server for depth estimation.
+
+    Provides HTTP and WebSocket endpoints for real-time depth estimation,
+    optimized for integration with TouchDesigner, vvvv, Processing, etc.
+
+    Endpoints:
+        - POST /process/frame: Process single frame via HTTP
+        - WS /stream: Real-time WebSocket streaming
+        - GET /stats: Get streaming statistics
+        - GET /health: Health check
+
+    Example (TouchDesigner):
+        1. Connect to ws://localhost:8080/stream
+        2. Send JPEG frames via WebSocket
+        3. Receive depth maps in real-time
+    """
+    import logging
+
+    # Configure logging
+    log_level_map = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+    }
+    numeric_level = log_level_map.get(log_level.upper(), logging.INFO)
+    logging.basicConfig(
+        level=numeric_level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+    typer.echo("=" * 60)
+    typer.echo("🌊 Starting Depth Anything 3 Streaming Server")
+    typer.echo("=" * 60)
+    typer.echo(f"Model directory: {model_dir}")
+    typer.echo(f"Log level: {log_level.upper()}")
+
+    # Auto-detect device if not specified
+    if device is None:
+        device = get_default_device()
+        typer.echo(f"Device: {device} (auto-detected)")
+    else:
+        typer.echo(f"Device: {device}")
+
+    typer.echo()
+    typer.echo("📡 Server will be available at:")
+    typer.echo(f"  🏠 Root:        http://{host}:{port}")
+    typer.echo(f"  📊 Health:      http://{host}:{port}/health")
+    typer.echo(f"  📈 Stats:       http://{host}:{port}/stats")
+    typer.echo(f"  🔗 HTTP Frame:  http://{host}:{port}/process/frame")
+    typer.echo(f"  🌐 WebSocket:   ws://{host}:{port}/stream")
+    typer.echo("=" * 60)
+    typer.echo()
+    typer.echo("💡 TouchDesigner Integration:")
+    typer.echo("   1. Add WebSocket DAT to your network")
+    typer.echo(f"   2. Set Address: ws://localhost:{port}/stream")
+    typer.echo("   3. Send frames: webSocketDAT.sendBinary(jpeg_bytes)")
+    typer.echo("   4. Receive via callbacks DAT onReceiveText()")
+    typer.echo()
+    typer.echo("⚙️  URL Parameters (customize per connection):")
+    typer.echo(f"   ws://localhost:{port}/stream?window_size=8&max_fps=15&quality=80")
+    typer.echo("   - window_size: Frames per window (lower=faster, higher=smoother)")
+    typer.echo("   - overlap: Overlapping frames (default: window_size/3)")
+    typer.echo("   - buffer_size: Min frames before processing (default: window_size/2)")
+    typer.echo("   - max_fps: Throttle processing FPS")
+    typer.echo("   - quality: JPEG quality 0-100 (lower=faster)")
+    typer.echo()
+
+    try:
+        start_stream_server(
+            model_dir=model_dir,
+            device=device,
+            host=host,
+            port=port,
+            process_res=process_res,
+        )
+    except KeyboardInterrupt:
+        typer.echo("\n👋 Streaming server stopped.")
+    except Exception as e:
+        typer.echo(f"❌ Failed to start streaming server: {e}")
         raise typer.Exit(1)
 
 

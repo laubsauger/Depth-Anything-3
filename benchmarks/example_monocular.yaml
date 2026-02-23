@@ -1,0 +1,118 @@
+# Monocular Model Benchmark Configuration
+#
+# Tests DA3MONO-LARGE - the monocular depth specialist.
+#
+# Key differences from any-view models:
+# - Direct depth prediction (not disparity-based)
+# - Superior geometric accuracy
+# - Sky segmentation support
+# - NO pose estimation
+# - NO pose conditioning
+# - NO Gaussian Splatting
+# - NO metric depth
+#
+# Best for: High-quality monocular depth from single images or videos
+
+name: "Monocular Depth Specialist Benchmark"
+description: "Tests DA3MONO-LARGE monocular depth specialist vs any-view models"
+
+# Test data
+input_video: null  # "path/to/test_video.mp4"
+
+output_dir: "benchmark_results/monocular"
+
+compare_against_baseline: true
+baseline_scenario_name: "DA3MONO-LARGE_512x512"
+
+scenarios:
+  # ========================================================================
+  # DA3MONO-LARGE - Monocular Specialist
+  # ========================================================================
+
+  - name: "DA3MONO-LARGE_512x512"
+    model:
+      name: "DA3MONO-LARGE"
+      model_dir: "depth-anything/DA3MONO-LARGE"
+      description: "350M params - Monocular specialist (direct depth + sky seg)"
+    num_cameras: 1
+    resolution: [512, 512]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    # Pose features NOT supported for monocular model
+    test_pose_estimation: false
+    test_pose_conditioned: false
+
+    # Output
+    save_depth_maps: true
+    save_comparison_video: true
+
+  - name: "DA3MONO-LARGE_1024x1024"
+    model:
+      name: "DA3MONO-LARGE"
+      model_dir: "depth-anything/DA3MONO-LARGE"
+      description: "Monocular specialist at high resolution"
+    num_cameras: 1
+    resolution: [1024, 1024]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    test_pose_estimation: false
+    test_pose_conditioned: false
+
+    save_depth_maps: false
+    save_comparison_video: true
+
+  # ========================================================================
+  # Comparison: DA3-LARGE (Any-View) vs DA3MONO-LARGE
+  # ========================================================================
+
+  - name: "DA3-LARGE_512x512"
+    model:
+      name: "DA3-LARGE"
+      model_dir: "depth-anything/DA3-LARGE"
+      description: "350M params - Any-view (for comparison)"
+    num_cameras: 1
+    resolution: [512, 512]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    # Any-view supports pose, but disable for fair comparison
+    test_pose_estimation: false
+    test_pose_conditioned: false
+
+    save_depth_maps: true
+    save_comparison_video: true
+
+  # ========================================================================
+  # Metric Model for Reference (if available)
+  # ========================================================================
+
+  - name: "DA3METRIC-LARGE_512x512"
+    model:
+      name: "DA3METRIC-LARGE"
+      model_dir: "depth-anything/DA3METRIC-LARGE"
+      description: "350M params - Metric depth specialist"
+    num_cameras: 1
+    resolution: [512, 512]
+    precision: "fp32"
+    device: "mps"
+    process_res: 504
+    num_frames: 50
+    warmup_frames: 5
+
+    # Metric model does NOT support pose
+    test_pose_estimation: false
+    test_pose_conditioned: false
+
+    save_depth_maps: false
+    save_comparison_video: true

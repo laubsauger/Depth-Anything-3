@@ -93,9 +93,15 @@ class ModelInference:
         """
         print(f"Processing images from {target_dir}")
 
-        # Device check
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Device check - prioritize CUDA, then MPS (macOS), then CPU
+        if torch.cuda.is_available():
+            device = "cuda"
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            device = "mps"
+        else:
+            device = "cpu"
         device = torch.device(device)
+        print(f"Using device: {device}")
 
         # Initialize model if needed
         self.initialize_model(device)
@@ -150,13 +156,15 @@ class ModelInference:
         if len(image_paths) == 0:
             raise ValueError("No images found. Check your upload.")
 
+        print(f"Processing {len(image_paths)} images on {device}")
+
         # Map UI options to actual method names
         method_mapping = {"high_res": "lower_bound_resize", "low_res": "upper_bound_resize"}
         actual_method = method_mapping.get(process_res_method, "upper_bound_crop")
 
         # Run model inference
         print(f"Running inference with method: {actual_method}")
-        with torch.no_grad():
+        with torch.inference_mode():
             prediction = self.model.inference(
                 image_paths, export_dir=None, process_res_method=actual_method, infer_gs=infer_gs
             )
@@ -191,8 +199,11 @@ class ModelInference:
         # Process results
         processed_data = self._process_results(target_dir, prediction, image_paths)
 
-        # Clean up
-        torch.cuda.empty_cache()
+        # Clean up GPU memory
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            torch.mps.empty_cache()
 
         return prediction, processed_data
 
@@ -283,4 +294,6 @@ class ModelInference:
         """Clean up GPU memory."""
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+        elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+            torch.mps.empty_cache()
         gc.collect()
